@@ -1,7 +1,7 @@
 // functions for sending data to server
 function formActions() {
-	const openRegFormBtn = document.querySelector("#open-reg-form");
-
+	const openRegFormBtn = document.querySelector("#open-reg-form"),
+		regFormCloseBtn = document.querySelector(".modal-close");
 	function showSelectedModal(selector) {
 		const modal = document.querySelector(selector);
 		const closeModalBtn = modal.querySelector(".modal-close");
@@ -71,11 +71,34 @@ function formActions() {
 							<td>${user.zip_code}</td>
 							<td>${user.gender}</td>
 							<td>
-									<button class="edit btn" type="button" data-user-id="${user.id}">Edit</button>
+									<button class="edit btn" type="button" data-user-id="${user.id}" data-name="satesto">Edit</button>
 									<button class="dlt btn" type="button" data-user-id="${user.id}">Delete</button>
 							</td>
 						</tr>`;
 		});
+
+		// forEach -ის დახმარებით იგივე შედეგის მიღება
+		let str = "";
+		const userRowsForEach = usersArray.forEach((user) => {
+			str += `
+				<tr>
+					<td>${user.id}</td>
+					<td>${user.first_name}</td>
+					<td>${user.last_name}</td>
+					<td>${user.email}</td>
+					<td>${user.id_number}</td>
+					<td>${user.phone}</td>
+					<td>${user.zip_code}</td>
+					<td>${user.gender}</td>
+					<td>
+							<button class="edit btn" type="button" data-user-id="${user.id}" data-name="satesto">Edit</button>
+							<button class="dlt btn" type="button" data-user-id="${user.id}">Delete</button>
+					</td>
+				</tr>`;
+		});
+
+		// console.log(str);
+
 		userTableBody.innerHTML = userRows.join("");
 
 		userActions(); // ყოველ რენდერზე ახლიდან უნდა მივაბათ ივენთ ლისნერები
@@ -88,6 +111,30 @@ function formActions() {
 		// 3. id შეინახეთ data-user-id ატრიბუტად ღილაკებზე, data ატრიბუტებზე წვდომა შეგიძლიათ dataset-ის გამოყენებით მაგ:selectedElement.dataset
 		// 4. წაშლა ღილაკზე დაჭერისას უნდა გაიგზავნოს წაშლის მოთხოვნა (deleteUser ფუნქციის მეშვეობით) სერვერზე და გადაეცეს id
 		// 5. ედიტის ღილაკზე უნდა გაიხსნას მოდალი სადაც ფორმი იქნება იმ მონაცემებით შევსებული რომელზეც მოხდა კლიკი. ედიტის ღილაკზე უნდა გამოიძახოთ getUser ფუნქცია და რომ დააბრუნებს ერთი მომხმარებლის დატას (ობიექტს და არა მასივს)  ეს დატა უნდა შეივსოს ფორმში და ამის შემდეგ შეგიძლიათ დააედიტოთ ეს ინფორმაცია და ფორმის დასაბმითებისას უნდა მოხდეს updateUser() ფუნქციის გამოძახება, სადაც გადასცემთ განახლებულ იუზერის ობიექტს, გვჭირდება იუზერის აიდიც, რომელიც  მოდალის გახსნისას user_id-ის (hidden input არის და ვიზუალურად არ ჩანს) value-ში შეგიძლიათ შეინახოთ
+		const editBtns = document.querySelectorAll(".edit");
+		const deleteBtns = document.querySelectorAll(".dlt");
+
+		editBtns.forEach((btn) => {
+			btn.addEventListener("click", async (e) => {
+				console.log(btn.dataset.userId, "edit");
+
+				const data = await getUser(btn.dataset.userId);
+
+				console.log(data);
+
+				fillForm(data.users);
+
+				showSelectedModal("#reg-modal");
+			});
+		});
+
+		deleteBtns.forEach((btn) => {
+			btn.addEventListener("click", (e) => {
+				// console.log(btn.dataset.userId, "delete");
+				const id = btn.dataset.userId;
+				deleteUser(id);
+			});
+		});
 	}
 
 	function getAllUsers() {
@@ -131,17 +178,49 @@ function formActions() {
 				`https://borjomi.loremipsum.ge/api/get-user/${id}`
 			);
 			const data = await response.json();
+
+			return data;
 			// console.log(data);
 		} catch (e) {
 			console.log("Error - ", e);
 		}
 	}
 
-	function updateUser(userObj) {
+	function fillForm(user) {
+		userName.value = user.first_name;
+		userSurname.value = user.last_name;
+		userEmail.value = user.email;
+		userPhone.value = user.phone;
+		userPersonalID.value = user.id_number;
+		userZip.value = user.zip_code;
+		userGender.value = user.gender;
+		user_id.value = user.id;
+	}
+
+	function updateUser(user) {
 		// მიიღებს დაედითებულ ინფორმაციას და გააგზავნით სერვერზე
 		// TODO დაასრულეთ ფუნქცია
 		//  method: "put",  http://borjomi.loremipsum.ge/api/update-user/${userObj.id}
 		// TODO: შენახვის, ედიტირების და წაშლის შემდეგ ახლიდან წამოიღეთ დატა
+		fetch(`http://borjomi.loremipsum.ge/api/update-user/${user.id}`, {
+			method: "put",
+			headers: {
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify(user),
+		})
+			.then((res) => res.json())
+			.then((data) => {
+				console.log(data);
+				getAllUsers();
+
+				user_id.value = "";
+				regForm.reset();
+				regFormCloseBtn.click();
+			})
+			.catch((e) => {
+				console.log("error", e);
+			});
 	}
 
 	function addNewUser(info) {
@@ -155,9 +234,13 @@ function formActions() {
 				console.log(data);
 				// გვიბრუნებს სტატუსს (წარმატებით გაიგზავნა თუ არა) და დამატებული იუზერის ობიექტს
 				// დატის მიღების შემდეგ ვწერთ ჩვენს კოდს
-				console.log(data);
+
 				// შენახვის, ედიტირების და წაშლის შემდეგ ხელახლა გამოგვაქვს ყველა იუზერი
 				getAllUsers();
+
+				user_id.value = "";
+				regForm.reset();
+				regFormCloseBtn.click();
 			})
 			.catch((err) => {
 				console.log(err);
@@ -177,16 +260,6 @@ function formActions() {
 		const userGenderValue = userGender.value;
 		const userZipValue = userZip.value;
 
-		// console.log(
-		// 	userNameValue,
-		// 	userEmailValue,
-		// 	userSurnameValue,
-		// 	userPersonalIDValue,
-		// 	userPhoneValue,
-		// 	userGenderValue,
-		// 	userZipValue
-		// );
-
 		const user = {
 			id: user_id.value, //ეს #user_id hidden input გვაქვს html-ში და ამას გამოვიყენებთ მხოლოდ დაედითებისთვის
 			first_name: userNameValue,
@@ -200,9 +273,44 @@ function formActions() {
 		//  TODO: თუ user_id.value არის ცარიელი (თავიდან ცარიელია) მაშინ უნდა შევქმნათ  -->  addNewUser(user);
 		// თუ დაედითებას ვაკეთებთ, ჩვენ ვანიჭებთ მნიშვნელობას userActions ფუნქციაში
 		// TODO: თუ user_id.value არის (არაა ცარიელი სტრინგი) მაშინ უნდა დავაედიტოთ, (როცა ფორმს ედითის ღილაკის შემდეგ იუზერის ინფუთით ვავსებთ, ვაედითებთ და ვასაბმითებთ) -->  updateUser(user);
-
-		// console.log(user, JSON.stringify(user));
+		if (user.id) {
+			console.log("update");
+			updateUser(user);
+		} else {
+			console.log("add new");
+			addNewUser(user);
+		}
 	});
+
+	// updateUserForm.addEventListener("submit", (e) => {
+	// 	e.preventDefault();
+
+	// 	const userNameValue = userName.value;
+	// 	const userEmailValue = userEmail.value;
+	// 	const userSurnameValue = userSurname.value;
+	// 	const userPersonalIDValue = userPersonalID.value;
+	// 	const userPhoneValue = userPhone.value;
+	// 	const userGenderValue = userGender.value;
+	// 	const userZipValue = userZip.value;
+
+	// 	const user = {
+	// 		id: user_id.value, //ეს #user_id hidden input გვაქვს html-ში და ამას გამოვიყენებთ მხოლოდ დაედითებისთვის
+	// 		first_name: userNameValue,
+	// 		last_name: userSurnameValue,
+	// 		phone: userPhoneValue,
+	// 		id_number: userPersonalIDValue,
+	// 		email: userEmailValue,
+	// 		gender: userGenderValue,
+	// 		zip_code: userZipValue,
+	// 	};
+
+	// 	updateUser(user)
+	// 	//  TODO: თუ user_id.value არის ცარიელი (თავიდან ცარიელია) მაშინ უნდა შევქმნათ  -->  addNewUser(user);
+	// 	// თუ დაედითებას ვაკეთებთ, ჩვენ ვანიჭებთ მნიშვნელობას userActions ფუნქციაში
+	// 	// TODO: თუ user_id.value არის (არაა ცარიელი სტრინგი) მაშინ უნდა დავაედიტოთ, (როცა ფორმს ედითის ღილაკის შემდეგ იუზერის ინფუთით ვავსებთ, ვაედითებთ და ვასაბმითებთ) -->  updateUser(user);
+
+	// 	console.log(user);
+	// });
 }
 
 formActions();

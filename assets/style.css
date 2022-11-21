@@ -150,16 +150,39 @@ th {
 }
 table {
 	border-collapse: collapse;
-	width: 90%;
+	width: 100%;
 	margin: 50px auto;
 }
 .dlt {
-	background-color: red;
+	color: white;
+	background-color: darkred;
 }
-td {
+.edit {
+	color: white;
+	background-color: darkgreen;
+	margin-bottom: 5px;
+	margin-top: 5px;
+}
+td,
+th {
 	padding: 5px 10px;
+	word-break: break-word;
 }
 
 thead th {
 	font-size: 20px;
+	color: white;
+	text-align: left;
+}
+tr:nth-child(2n) {
+	background-color: lightblue;
+}
+tr:nth-child(2n + 1) {
+	background-color: cadetblue;
+}
+thead tr:nth-child(2n + 1) {
+	background-color: darkcyan;
+}
+tbody td:first-child {
+	font-weight: bold;
 }
